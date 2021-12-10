@@ -1,0 +1,3 @@
+[submodule "mod_station"]
+	path = mod_station
+	url = ../ModStation
