@@ -14,6 +14,7 @@ message(STATUS "Current cxx_flags: ${CMAKE_CXX_FLAGS}")
 
 # include dependencies
 #include(${PROJECT_SOURCE_DIR}/mod_station/wingman/grpc.cmake)
+include(${PROJECT_SOURCE_DIR}/mod_station/wingman/common.cmake)
 #include(${})
 
 # install git hooks
@@ -26,7 +27,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_BINARY_DIR})
 target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_SOURCE_DIR}/include)
 target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_SOURCE_DIR}/src)
 
-#target_link_libraries(${PROJECT_NAME} PUBLIC )
+target_link_libraries(${PROJECT_NAME} PUBLIC timestamp_common)
 
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/ DESTINATION include
         FILES_MATCHING PATTERN "*.h")
