@@ -28,7 +28,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_SOURCE_DIR}/src)
 
 target_link_libraries(${PROJECT_NAME} PUBLIC timestamp_common)
 
-target_link_libraries(stf PUBLIC timestamp_common)
+target_link_libraries(stf_interface PUBLIC timestamp_common)
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/ DESTINATION include
         FILES_MATCHING PATTERN "*.h")
 #add_executable(stf_interface src/main.cpp)
