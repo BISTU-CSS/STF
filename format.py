@@ -24,7 +24,7 @@ def get_root_path(anchor=".clang-format"):
 
 def run():
     file_types = ["*.cpp", "*.c", "*.hpp", "*.h", "*.inc"]
-    sub_folders = ["src", "include"]
+    sub_folders = ["src", "include", "sample"]
     format_file = ".clang-format"
     root = get_root_path(format_file)
     print("format in [%s] with [%s]" % (
@@ -38,7 +38,7 @@ def run():
 
 def check():
     file_types = ["*.cpp", "*.c", "*.hpp", "*.h", "*.inc"]
-    sub_folders = ["src", "include"]
+    sub_folders = ["src", "include", "sample"]
     format_file = ".clang-format"
     root = get_root_path(format_file)
     print("check in [%s] with [%s]" % (

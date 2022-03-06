@@ -29,6 +29,15 @@ extern "C" {
 typedef unsigned char SGD_UINT8;
 typedef unsigned int SGD_UINT32;
 
+#define SGD_SM3_RSA 0x00010001
+#define SGD_SHA1_RSA 0x00010002
+#define SGD_SHA256_RSA 0x00010004
+#define SGD_SM3_SM2 0x00020201
+
+#define SGD_SM3 0x00000001
+#define SGD_SHA1 0x00000002
+#define SGD_SHA256 0x00000004
+
 // 返回值与错误码定义
 #define STF_TS_OK 0
 #define STF_TS_ERROR_BASE 0x04000000
@@ -46,6 +55,7 @@ typedef unsigned int SGD_UINT32;
 #define STF_TS_ADDINFO_NOT_AVAILBLE 0x0400000C
 #define STF_TS_SYSTEM_FAILURE 0x0400000E
 
+#define STF_TS_CONFIG_ERROR 0x04000010
 #define STF_TS_CONFIG_ERROR 0x04000010
 
 /**
@@ -69,6 +79,7 @@ SGD_UINT32 STF_ClearEnvironment(void *hTSHandle);
  * @param uiInDataLength[in]: 用户信息的长度
  * @param uiReqType[in]: 请求的时间戳服务类型
  * @param pucTSExt[in]: 时间戳请求包的其他扩展，DER编码格式
+ * @param uiTSExtLength[in]:
  * @param uiHashAlgID[in]: 密码杂凑算法标识
  * @param pucTSRequest[out]: 时间戳请求
  * @param puiTSRequestLength[in,out]: 时间戳请求的长度
@@ -80,8 +91,8 @@ SGD_UINT32 STF_ClearEnvironment(void *hTSHandle);
  */
 SGD_UINT32 STF_CreateTSRequest(void *hTSHandle, SGD_UINT8 *pucInData,
                                SGD_UINT32 uiInDataLength, SGD_UINT32 uiReqType,
-                               SGD_UINT8 *pucTSExt, SGD_UINT32 uiHashAlgID,
-                               SGD_UINT8 *pucTSRequest,
+                               SGD_UINT8 *pucTSExt, SGD_UINT32 uiTSExtLength,
+                               SGD_UINT32 uiHashAlgID, SGD_UINT8 *pucTSRequest,
                                SGD_UINT32 *puiTSRequestLength);
 
 /**
@@ -96,11 +107,11 @@ SGD_UINT32 STF_CreateTSRequest(void *hTSHandle, SGD_UINT8 *pucInData,
  * @note puiTSResponseLength[in,out]:
  * 入口值为指定的用于存放时间戳的字符数组的最大长度，出口值为时间戳的实际长度
  */
-SGD_UINT32 STF_CreateTSReponse(void *hTSHandle, SGD_UINT8 *pucTSRequest,
-                               SGD_UINT32 uiTSRequestLength,
-                               SGD_UINT32 uiSignatureAlgID,
-                               SGD_UINT8 *pucTSResponse,
-                               SGD_UINT32 *puiTSResponseLength);
+SGD_UINT32 STF_CreateTSResponse(void *hTSHandle, SGD_UINT8 *pucTSRequest,
+                                SGD_UINT32 uiTSRequestLength,
+                                SGD_UINT32 uiSignatureAlgID,
+                                SGD_UINT8 *pucTSResponse,
+                                SGD_UINT32 *puiTSResponseLength);
 
 /**
  * @brief 验证时间戳响应是否有效
@@ -169,7 +180,7 @@ SGD_UINT32 STF_GetTSInfo(void *hTSHandle, SGD_UINT8 *pucTSResponse,
  */
 SGD_UINT32 STF_GetTSDetail(void *hTSHandle, SGD_UINT8 *pucTSResponse,
                            SGD_UINT32 uiTSResponseLength,
-                           SGD_UINT32 uiItemnumber, SGD_UINT8 *pucItemValue,
+                           SGD_UINT32 uiItemNumber, SGD_UINT8 *pucItemValue,
                            SGD_UINT32 *puiItemValueLength);
 
 #ifdef __cplusplus
