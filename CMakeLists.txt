@@ -11,10 +11,8 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 
 message(STATUS "Current cxx_flags: ${CMAKE_CXX_FLAGS}")
 # include dependencies
-#include(${PROJECT_SOURCE_DIR}/mod_station/wingman/grpc.cmake)
 include(${PROJECT_SOURCE_DIR}/mod_station/wingman/common.cmake)
-#include(${})
-
+link_libraries(z)
 # install git hooks
 #include(${PROJECT_SOURCE_DIR}/ndsec_helper/githooks/apply_git_hooks.cmake)
 
@@ -28,7 +26,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_SOURCE_DIR}/src)
 
 target_link_libraries(${PROJECT_NAME} PUBLIC timestamp_common)
 
-target_link_libraries(stf_interface PUBLIC timestamp_common)
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/ DESTINATION include
-        FILES_MATCHING PATTERN "*.h")
-#add_executable(stf_interface src/main.cpp)
+       FILES_MATCHING PATTERN "*.h")
+
+add_subdirectory(sample)

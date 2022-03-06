@@ -1,52 +1,107 @@
+#include <fstream>
 #include "stf.h"
 #include "openssl/ossl_typ.h"
 #include "openssl/pkcs7.h"
 #include "openssl/x509v3.h"
 #include "openssl/ts.h"
 
-SGD_UINT32 STF_InitEnvironment(void **phTSHandle) { return STF_TS_OK; }
+#include "grpc_cs/greeter_client.h"
 
-SGD_UINT32 STF_ClearEnvironment(void *hTSHandle) { return STF_TS_OK; }
+#define UNUSED __attribute__((unused))
 
-SGD_UINT32 STF_CreateTSRequest(void *hTSHandle, SGD_UINT8 *pucInData,
-                               SGD_UINT32 uiInDataLength, SGD_UINT32 uiReqType,
-                               SGD_UINT8 *pucTSExt, SGD_UINT32 uiHashAlgID,
-                               SGD_UINT8 *pucTSRequest,
-                               SGD_UINT32 *puiTSRequestLength) {
-  return STF_TS_OK;
+std::string ndsec_tsa_config;
+
+bool load_config(){
+    if(ndsec_tsa_config.empty()){
+        std::ifstream config_file("NdsecTsaConfig.ini");
+        std::string temp;
+        if (!config_file.is_open()){
+            return false;
+        }
+        while(getline(config_file,temp)){
+            std::cout<<temp<<std::endl;
+        }
+        config_file.close();
+    }
+    // not empty
+    return true;
 }
 
-SGD_UINT32 STF_CreateTSReponse(void *hTSHandle, SGD_UINT8 *pucTSRequest,
-                               SGD_UINT32 uiTSRequestLength,
-                               SGD_UINT32 uiSignatureAlgID,
-                               SGD_UINT8 *pucTSResponse,
-                               SGD_UINT32 *puiTSResponseLength) {
-  return STF_TS_OK;
+InitEnvironmentOutput TimeStampClient::InitEnvironment() {
+    timestamp::InitEnvironmentInput request;
+    timestamp::InitEnvironmentOutput reply;
+    grpc::ClientContext context;
+    grpc::Status status = stub_->InitEnvironment(&context, request, &reply);
+    return reply;
+};
+SGD_UINT32 STF_InitEnvironment(UNUSED void **phTSHandle) {
+    if(load_config()){
+        return STF_TS_CONFIG_ERROR;
+    }
+    /*
+    TimeStampClient greeter(grpc::CreateChannel(
+            ndsec_tsa_config, grpc::InsecureChannelCredentials()));
+    InitEnvironmentOutput res = greeter.InitEnvironment();
+    std::cout << "Status code: " <<  res.code() << std::endl;
+
+    if(res.code() != timestamp::GRPC_STF_TS_OK){
+        return res.code();
+    }
+
+    std::cout << "Status code: " <<  res.handle().session_id() << std::endl;
+    */
+    return STF_TS_OK;
 }
 
-SGD_UINT32 STF_VerifyTSValidity(void *hTSHandle, SGD_UINT8 *pucTSResponse,
-                                SGD_UINT32 uiTSResponseLength,
-                                SGD_UINT32 uiHashAlgID,
-                                SGD_UINT32 uiSignatureAlgID,
-                                SGD_UINT8 *pucTSCert,
-                                SGD_UINT32 uiTSCertLength) {
-  return STF_TS_OK;
+SGD_UINT32 STF_ClearEnvironment(UNUSED void *hTSHandle) {
+    load_config();
+
+    return STF_TS_OK;
 }
 
-SGD_UINT32 STF_GetTSInfo(void *hTSHandle, SGD_UINT8 *pucTSResponse,
-                         SGD_UINT32 uiTSResponseLength,
-                         SGD_UINT8 *pucIssuerName,
-                         SGD_UINT32 *puiIssuerNameLength, SGD_UINT8 *pucTime,
-                         SGD_UINT32 *puiTimeLength) {
-  return STF_TS_OK;
+SGD_UINT32 STF_CreateTSRequest(UNUSED void *hTSHandle,UNUSED SGD_UINT8 *pucInData,
+                               UNUSED SGD_UINT32 uiInDataLength,UNUSED SGD_UINT32 uiReqType,
+                               UNUSED SGD_UINT8 *pucTSExt,UNUSED SGD_UINT32 uiHashAlgID,
+                               UNUSED SGD_UINT8 *pucTSRequest,
+                               UNUSED SGD_UINT32 *puiTSRequestLength) {
+    load_config();
+    return STF_TS_OK;
 }
 
-SGD_UINT32 STF_GetTSDetail(void *hTSHandle, SGD_UINT8 *pucTSResponse,
-                           SGD_UINT32 uiTSResponseLength,
-                           SGD_UINT32 uiItemnumber, SGD_UINT8 *pucItemValue,
-                           SGD_UINT32 *puiItemValueLength) {
+SGD_UINT32 STF_CreateTSReponse(UNUSED void *hTSHandle,UNUSED SGD_UINT8 *pucTSRequest,
+                               UNUSED SGD_UINT32 uiTSRequestLength,
+                               UNUSED SGD_UINT32 uiSignatureAlgID,
+                               UNUSED SGD_UINT8 *pucTSResponse,
+                               UNUSED SGD_UINT32 *puiTSResponseLength) {
+    load_config();
+    return STF_TS_OK;
+}
 
-  return STF_TS_OK;
+SGD_UINT32 STF_VerifyTSValidity(UNUSED void *hTSHandle,UNUSED SGD_UINT8 *pucTSResponse,
+                                UNUSED SGD_UINT32 uiTSResponseLength,
+                                UNUSED SGD_UINT32 uiHashAlgID,
+                                UNUSED SGD_UINT32 uiSignatureAlgID,
+                                UNUSED SGD_UINT8 *pucTSCert,
+                                UNUSED SGD_UINT32 uiTSCertLength) {
+    load_config();
+    return STF_TS_OK;
+}
+
+SGD_UINT32 STF_GetTSInfo(UNUSED void *hTSHandle,UNUSED SGD_UINT8 *pucTSResponse,
+                         UNUSED SGD_UINT32 uiTSResponseLength,
+                         UNUSED SGD_UINT8 *pucIssuerName,
+                         UNUSED SGD_UINT32 *puiIssuerNameLength,UNUSED SGD_UINT8 *pucTime,
+                         UNUSED SGD_UINT32 *puiTimeLength) {
+    load_config();
+    return STF_TS_OK;
+}
+
+SGD_UINT32 STF_GetTSDetail(UNUSED void *hTSHandle,UNUSED SGD_UINT8 *pucTSResponse,
+                           UNUSED SGD_UINT32 uiTSResponseLength,
+                           UNUSED SGD_UINT32 uiItemnumber, UNUSED SGD_UINT8 *pucItemValue,
+                           UNUSED SGD_UINT32 *puiItemValueLength) {
+    load_config();
+    return STF_TS_OK;
 }
 
 struct TS_msg_imprint_st {
@@ -73,14 +128,11 @@ struct TS_req_st {
   STACK_OF(X509_EXTENSION) *extensions;
 };
 
-
 struct TS_status_info_st {
   ASN1_INTEGER *status;
   STACK_OF(ASN1_UTF8STRING) *text;
   ASN1_BIT_STRING *failure_info;
 };
-
-
 
 /*-
  * TimeStampResp ::= SEQUENCE  {
