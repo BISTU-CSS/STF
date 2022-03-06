@@ -47,6 +47,7 @@ typedef unsigned int SGD_UINT32;
 #define STF_TS_SYSTEM_FAILURE 0x0400000E
 
 #define STF_TS_CONFIG_ERROR 0x04000010
+
 /**
  * @brief 建立时间戳环境句柄
  * @param phTSHandle[out]: 时间戳环境句柄指针
