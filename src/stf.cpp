@@ -1,10 +1,6 @@
 #include "stf.h"
 
 #include "fmt/os.h"
-#include "openssl/ossl_typ.h"
-#include "openssl/pkcs7.h"
-#include "openssl/ts.h"
-#include "openssl/x509v3.h"
 
 #include <fstream>
 #include <regex>
@@ -12,6 +8,7 @@
 #include "grpc_cs/greeter_client.h"
 
 #define UNUSED __attribute__((unused))
+#define GRPC_STF_TS_LINK_FAILED 0
 
 std::string ndsec_tsa_config;
 
@@ -56,7 +53,6 @@ bool load_config() {
 InitEnvironmentOutput TimeStampClient::InitEnvironment() {
   InitEnvironmentInput request;
   InitEnvironmentOutput reply;
-
   grpc::ClientContext context;
   grpc::Status status = stub_->InitEnvironment(&context, request, &reply);
   return reply;
@@ -67,6 +63,7 @@ SGD_UINT32 STF_InitEnvironment(void **phTSHandle) {
   }
   TimeStampClient greeter(grpc::CreateChannel(
       ndsec_tsa_config, grpc::InsecureChannelCredentials()));
+
   InitEnvironmentOutput res = greeter.InitEnvironment();
   if (res.code() != timestamp::GRPC_STF_TS_OK) {
     return res.code();
@@ -76,7 +73,7 @@ SGD_UINT32 STF_InitEnvironment(void **phTSHandle) {
 }
 
 ClearEnvironmentOutput
-TimeStampClient::ClearEnvironment(const ClearEnvironmentInput &request) {
+TimeStampClient::ClearEnvironment(ClearEnvironmentInput request) {
   ClearEnvironmentOutput reply;
   grpc::ClientContext context;
   grpc::Status status = stub_->ClearEnvironment(&context, request, &reply);
@@ -85,6 +82,9 @@ TimeStampClient::ClearEnvironment(const ClearEnvironmentInput &request) {
 SGD_UINT32 STF_ClearEnvironment(void *hTSHandle) {
   if (!load_config()) {
     return STF_TS_CONFIG_ERROR;
+  }
+  if (hTSHandle == nullptr) {
+    return STF_TS_INVALID_REQUEST; //非法请求
   }
   TimeStampClient greeter(grpc::CreateChannel(
       ndsec_tsa_config, grpc::InsecureChannelCredentials()));
@@ -98,21 +98,23 @@ SGD_UINT32 STF_ClearEnvironment(void *hTSHandle) {
 }
 
 CreateTSRequestOutput
-TimeStampClient::CreateTSRequest(const CreateTSRequestInput &request) {
+TimeStampClient::CreateTSRequest(CreateTSRequestInput request) {
   CreateTSRequestOutput reply;
   grpc::ClientContext context;
   grpc::Status status = stub_->CreateTSRequest(&context, request, &reply);
   return reply;
 }
-SGD_UINT32 STF_CreateTSRequest(void *hTSHandle, UNUSED SGD_UINT8 *pucInData,
+SGD_UINT32 STF_CreateTSRequest(void *hTSHandle, SGD_UINT8 *pucInData,
                                UNUSED SGD_UINT32 uiInDataLength,
                                SGD_UINT32 uiReqType, UNUSED SGD_UINT8 *pucTSExt,
                                UNUSED SGD_UINT32 uiTSExtLength,
-                               SGD_UINT32 uiHashAlgID,
-                               UNUSED SGD_UINT8 *pucTSRequest,
-                               UNUSED SGD_UINT32 *puiTSRequestLength) {
+                               SGD_UINT32 uiHashAlgID, SGD_UINT8 *pucTSRequest,
+                               SGD_UINT32 *puiTSRequestLength) {
   if (!load_config()) {
     return STF_TS_CONFIG_ERROR;
+  }
+  if (hTSHandle == nullptr) {
+    return STF_TS_INVALID_REQUEST; //非法请求
   }
   if (!(uiHashAlgID == SGD_SHA256 || uiHashAlgID == SGD_SM3)) {
     return STF_TS_INVALID_ALG; //不支持的算法类型
@@ -126,14 +128,31 @@ SGD_UINT32 STF_CreateTSRequest(void *hTSHandle, UNUSED SGD_UINT8 *pucInData,
   if (pucTSRequest == nullptr || puiTSRequestLength == nullptr) {
     return STF_TS_INVALID_DATAFORMAT; //数据格式错误
   }
+  auto prepare_buffer_length = reinterpret_cast<size_t>(puiTSRequestLength);
   TimeStampClient greeter(grpc::CreateChannel(
       ndsec_tsa_config, grpc::InsecureChannelCredentials()));
   CreateTSRequestInput req_input;
   auto *handle = new timestamp::Handle;
   handle->set_session_id(*(uint64_t *)hTSHandle);
   req_input.set_allocated_handle(handle);
-
+  req_input.set_uireqtype(uiReqType);
+  req_input.set_uihashalgid(uiHashAlgID);
+  std::string tmp_indata = reinterpret_cast<const char *>(pucInData);
+  req_input.set_pucindata(tmp_indata);
+  req_input.set_uiindatalength(uiInDataLength);
   CreateTSRequestOutput res = greeter.CreateTSRequest(req_input);
+  *puiTSRequestLength = res.puctsrequestlength();
+  auto result_buffer = res.puctsrequest().c_str();
+
+  if (strlen(result_buffer) <= prepare_buffer_length) {
+    //缓冲区正常
+    strcpy((char *)pucTSRequest, result_buffer);
+  } else {
+    //缓冲区错误
+    return STF_TS_NOT_ENOUGH_MEMORY;
+  }
+  if(res.code() == 0)
+
   if (res.code() != timestamp::GRPC_STF_TS_OK) {
     return res.code();
   }
@@ -142,174 +161,162 @@ SGD_UINT32 STF_CreateTSRequest(void *hTSHandle, UNUSED SGD_UINT8 *pucInData,
 }
 
 CreateTSResponseOutput
-TimeStampClient::CreateTSResponse(const CreateTSResponseInput &request) {
+TimeStampClient::CreateTSResponse(CreateTSResponseInput request) {
   CreateTSResponseOutput reply;
   grpc::ClientContext context;
   grpc::Status status = stub_->CreateTSResponse(&context, request, &reply);
   return reply;
 }
-SGD_UINT32 STF_CreateTSReponse(UNUSED void *hTSHandle,
-                               UNUSED SGD_UINT8 *pucTSRequest,
+SGD_UINT32 STF_CreateTSResponse(void *hTSHandle, UNUSED SGD_UINT8 *pucTSRequest,
                                UNUSED SGD_UINT32 uiTSRequestLength,
                                UNUSED SGD_UINT32 uiSignatureAlgID,
                                UNUSED SGD_UINT8 *pucTSResponse,
                                UNUSED SGD_UINT32 *puiTSResponseLength) {
+  // 基本检查
   if (!load_config()) {
     return STF_TS_CONFIG_ERROR;
   }
+  if (hTSHandle == nullptr) {
+    return STF_TS_INVALID_REQUEST; //非法请求
+  }
+  //创建链接
   TimeStampClient greeter(grpc::CreateChannel(
       ndsec_tsa_config, grpc::InsecureChannelCredentials()));
+  CreateTSResponseInput req_input;
+  auto *handle = new timestamp::Handle;
+  handle->set_session_id(*(uint64_t *)hTSHandle);
+  req_input.set_allocated_handle(handle);
+
+  //发送，并获得结果
+  CreateTSResponseOutput res = greeter.CreateTSResponse(req_input);
+  if(res.code() == GRPC_STF_TS_LINK_FAILED){
+    return STF_TS_SERVER_ERROR;
+  }
+  else if (res.code() != timestamp::GRPC_STF_TS_OK) {
+    return res.code();
+  }
+  //正常情况
+
 
   return STF_TS_OK;
 }
 
 VerifyTSValidityOutput
-TimeStampClient::VerifyTSValidity(const VerifyTSValidityInput &request) {
+TimeStampClient::VerifyTSValidity(VerifyTSValidityInput request) {
   VerifyTSValidityOutput reply;
   grpc::ClientContext context;
   grpc::Status status = stub_->VerifyTSValidity(&context, request, &reply);
   return reply;
 }
-SGD_UINT32 STF_VerifyTSValidity(UNUSED void *hTSHandle,
+SGD_UINT32 STF_VerifyTSValidity(void *hTSHandle,
                                 UNUSED SGD_UINT8 *pucTSResponse,
                                 UNUSED SGD_UINT32 uiTSResponseLength,
                                 UNUSED SGD_UINT32 uiHashAlgID,
                                 UNUSED SGD_UINT32 uiSignatureAlgID,
                                 UNUSED SGD_UINT8 *pucTSCert,
                                 UNUSED SGD_UINT32 uiTSCertLength) {
+  if (hTSHandle == nullptr) {
+    return STF_TS_INVALID_REQUEST; //非法请求
+  }
   if (!load_config()) {
     return STF_TS_CONFIG_ERROR;
   }
   TimeStampClient greeter(grpc::CreateChannel(
       ndsec_tsa_config, grpc::InsecureChannelCredentials()));
 
+  VerifyTSValidityInput req_input;
+  auto *handle = new timestamp::Handle;
+  handle->set_session_id(*(uint64_t *)hTSHandle);
+  req_input.set_allocated_handle(handle);
+
+  VerifyTSValidityOutput res = greeter.VerifyTSValidity(req_input);
+  if(res.code() == GRPC_STF_TS_LINK_FAILED){
+    return STF_TS_SERVER_ERROR;
+  }
+  else if (res.code() != timestamp::GRPC_STF_TS_OK) {
+    return res.code();
+  }
+  //正常情况
+
+
   return STF_TS_OK;
 }
 
-GetTSInfoOutput TimeStampClient::GetTSInfo(const GetTSInfoInput &request) {
+GetTSInfoOutput TimeStampClient::GetTSInfo(GetTSInfoInput request) {
   GetTSInfoOutput reply;
   grpc::ClientContext context;
   grpc::Status status = stub_->GetTSInfo(&context, request, &reply);
   return reply;
 }
-SGD_UINT32 STF_GetTSInfo(UNUSED void *hTSHandle,
-                         UNUSED SGD_UINT8 *pucTSResponse,
+SGD_UINT32 STF_GetTSInfo(void *hTSHandle, UNUSED SGD_UINT8 *pucTSResponse,
                          UNUSED SGD_UINT32 uiTSResponseLength,
                          UNUSED SGD_UINT8 *pucIssuerName,
                          UNUSED SGD_UINT32 *puiIssuerNameLength,
                          UNUSED SGD_UINT8 *pucTime,
                          UNUSED SGD_UINT32 *puiTimeLength) {
+  if (hTSHandle == nullptr) {
+    return STF_TS_INVALID_REQUEST; //非法请求
+  }
   if (!load_config()) {
     return STF_TS_CONFIG_ERROR;
   }
   TimeStampClient greeter(grpc::CreateChannel(
       ndsec_tsa_config, grpc::InsecureChannelCredentials()));
 
+  GetTSInfoInput req_input;
+  auto *handle = new timestamp::Handle;
+  handle->set_session_id(*(uint64_t *)hTSHandle);
+  req_input.set_allocated_handle(handle);
+
+  GetTSInfoOutput res = greeter.GetTSInfo(req_input);
+  if(res.code() == GRPC_STF_TS_LINK_FAILED){
+    return STF_TS_SERVER_ERROR;
+  }
+  else if (res.code() != timestamp::GRPC_STF_TS_OK) {
+    return res.code();
+  }
+  //正常情况
+
+
   return STF_TS_OK;
 }
 
-GetTSDetailOutput TimeStampClient::GetTSInfo(const GetTSDetailInput &request) {
+GetTSDetailOutput
+TimeStampClient::GetTSDetail(GetTSDetailInput request) {
   GetTSDetailOutput reply;
   grpc::ClientContext context;
   grpc::Status status = stub_->GetTSDetail(&context, request, &reply);
   return reply;
 }
-SGD_UINT32 STF_GetTSDetail(UNUSED void *hTSHandle,
-                           UNUSED SGD_UINT8 *pucTSResponse,
+SGD_UINT32 STF_GetTSDetail(void *hTSHandle, UNUSED SGD_UINT8 *pucTSResponse,
                            UNUSED SGD_UINT32 uiTSResponseLength,
                            UNUSED SGD_UINT32 uiItemnumber,
                            UNUSED SGD_UINT8 *pucItemValue,
                            UNUSED SGD_UINT32 *puiItemValueLength) {
+  if (hTSHandle == nullptr) {
+    return STF_TS_INVALID_REQUEST; //非法请求
+  }
   if (!load_config()) {
     return STF_TS_CONFIG_ERROR;
   }
+
   TimeStampClient greeter(grpc::CreateChannel(
       ndsec_tsa_config, grpc::InsecureChannelCredentials()));
 
+  GetTSDetailInput req_input;
+  auto *handle = new timestamp::Handle;
+  handle->set_session_id(*(uint64_t *)hTSHandle);
+  req_input.set_allocated_handle(handle);
+
+  GetTSDetailOutput res = greeter.GetTSDetail(req_input);
+  if(res.code() == GRPC_STF_TS_LINK_FAILED){
+    return STF_TS_SERVER_ERROR;
+  }
+  else if (res.code() != timestamp::GRPC_STF_TS_OK) {
+    return res.code();
+  }
+  //正常情况
+
+
   return STF_TS_OK;
 }
-
-struct TS_msg_imprint_st {
-  X509_ALGOR *hash_algo;
-  ASN1_OCTET_STRING *hashed_msg;
-};
-/*-
- * TimeStampReq ::= SEQUENCE  {
- *    version                  INTEGER  { v1(1) },
- *    messageImprint           MessageImprint,
- *      --a hash algorithm OID and the hash value of the data to be
- *      --time-stamped
- *    reqPolicy                TSAPolicyId                OPTIONAL,
- *    nonce                    INTEGER                    OPTIONAL,
- *    certReq                  BOOLEAN                    DEFAULT FALSE,
- *    extensions               [0] IMPLICIT Extensions    OPTIONAL  }
- */
-struct TS_req_st {
-  ASN1_INTEGER *version;
-  TS_msg_imprint_st *msg_imprint;
-  ASN1_OBJECT *policy_id;
-  ASN1_INTEGER *nonce;
-  ASN1_BOOLEAN cert_req;
-  STACK_OF(X509_EXTENSION) * extensions;
-};
-
-struct TS_status_info_st {
-  ASN1_INTEGER *status;
-  STACK_OF(ASN1_UTF8STRING) * text;
-  ASN1_BIT_STRING *failure_info;
-};
-
-/*-
- * TimeStampResp ::= SEQUENCE  {
- *     status                  PKIStatusInfo,
- *     timeStampToken          TimeStampToken     OPTIONAL }
- */
-struct TS_resp_st {
-  TS_status_info_st *status;
-  PKCS7 *token;
-  TS_TST_INFO *tst_info;
-};
-
-/*-
- * Accuracy ::= SEQUENCE {
- *                 seconds        INTEGER           OPTIONAL,
- *                 millis     [0] INTEGER  (1..999) OPTIONAL,
- *                 micros     [1] INTEGER  (1..999) OPTIONAL  }
- */
-struct TS_accuracy_st {
-  ASN1_INTEGER *seconds;
-  ASN1_INTEGER *millis;
-  ASN1_INTEGER *micros;
-};
-
-/*-
- * TSTInfo ::= SEQUENCE  {
- *     version                      INTEGER  { v1(1) },
- *     policy                       TSAPolicyId,
- *     messageImprint               MessageImprint,
- *       -- MUST have the same value as the similar field in
- *       -- TimeStampReq
- *     serialNumber                 INTEGER,
- *      -- Time-Stamping users MUST be ready to accommodate integers
- *      -- up to 160 bits.
- *     genTime                      GeneralizedTime,
- *     accuracy                     Accuracy                 OPTIONAL,
- *     ordering                     BOOLEAN             DEFAULT FALSE,
- *     nonce                        INTEGER                  OPTIONAL,
- *       -- MUST be present if the similar field was present
- *       -- in TimeStampReq.  In that case it MUST have the same value.
- *     tsa                          [0] GeneralName          OPTIONAL,
- *     extensions                   [1] IMPLICIT Extensions  OPTIONAL   }
- */
-struct TS_tst_info_st {
-  ASN1_INTEGER *version;
-  ASN1_OBJECT *policy_id;
-  TS_msg_imprint_st *msg_imprint;
-  ASN1_INTEGER *serial;
-  ASN1_GENERALIZEDTIME *time;
-  TS_accuracy_st *accuracy;
-  ASN1_BOOLEAN ordering;
-  ASN1_INTEGER *nonce;
-  GENERAL_NAME *tsa;
-  STACK_OF(X509_EXTENSION) * extensions;
-};
