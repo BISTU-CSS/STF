@@ -1,14 +1,13 @@
 #include "stf.h"
 
-#include "fmt/os.h"
-
 #include <fstream>
 #include <regex>
+
+#include "fmt/os.h"
 
 #include "grpc_cs/greeter_client.h"
 
 #define UNUSED __attribute__((unused))
-#define GRPC_STF_TS_LINK_FAILED 0
 
 std::string ndsec_tsa_config;
 
@@ -58,6 +57,7 @@ InitEnvironmentOutput TimeStampClient::InitEnvironment() {
   return reply;
 }
 SGD_UINT32 STF_InitEnvironment(void **phTSHandle) {
+  // 基本检查
   if (!load_config()) {
     return STF_TS_CONFIG_ERROR;
   }
@@ -83,6 +83,7 @@ TimeStampClient::ClearEnvironment(ClearEnvironmentInput request) {
   return reply;
 }
 SGD_UINT32 STF_ClearEnvironment(void *hTSHandle) {
+  // 基本检查
   if (!load_config()) {
     return STF_TS_CONFIG_ERROR;
   }
@@ -120,6 +121,7 @@ SGD_UINT32 STF_CreateTSRequest(void *hTSHandle, SGD_UINT8 *pucInData,
                                UNUSED SGD_UINT32 uiTSExtLength,
                                SGD_UINT32 uiHashAlgID, SGD_UINT8 *pucTSRequest,
                                SGD_UINT32 *puiTSRequestLength) {
+  // 基本检查
   if (!load_config()) {
     return STF_TS_CONFIG_ERROR;
   }
@@ -228,6 +230,7 @@ SGD_UINT32 STF_VerifyTSValidity(void *hTSHandle,
                                 UNUSED SGD_UINT32 uiSignatureAlgID,
                                 UNUSED SGD_UINT8 *pucTSCert,
                                 UNUSED SGD_UINT32 uiTSCertLength) {
+  // 基本检查
   if (hTSHandle == nullptr) {
     return STF_TS_INVALID_REQUEST; //非法请求
   }
@@ -267,6 +270,7 @@ SGD_UINT32 STF_GetTSInfo(void *hTSHandle, UNUSED SGD_UINT8 *pucTSResponse,
                          UNUSED SGD_UINT32 *puiIssuerNameLength,
                          UNUSED SGD_UINT8 *pucTime,
                          UNUSED SGD_UINT32 *puiTimeLength) {
+  // 基本检查
   if (hTSHandle == nullptr) {
     return STF_TS_INVALID_REQUEST; //非法请求
   }
@@ -306,6 +310,7 @@ SGD_UINT32 STF_GetTSDetail(void *hTSHandle, UNUSED SGD_UINT8 *pucTSResponse,
                            UNUSED SGD_UINT32 uiItemnumber,
                            UNUSED SGD_UINT8 *pucItemValue,
                            UNUSED SGD_UINT32 *puiItemValueLength) {
+  // 基本检查
   if (hTSHandle == nullptr) {
     return STF_TS_INVALID_REQUEST; //非法请求
   }

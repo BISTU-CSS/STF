@@ -42,8 +42,8 @@ int main(UNUSED int argc, UNUSED char *argv[]) {
                                 timestampReqData, &timestampReqDataLen);
   if (retcode == STF_TS_OK) {
     std::cout << "STF_CreateTSRequest: OK" << std::endl;
-    std::cout << "STF_CreateTSRequest: " << timestampReqData << std::endl;
-    std::cout << "STF_CreateTSRequest: " << timestampReqDataLen << std::endl;
+    std::cout << "\ttimestampReqData: "  << timestampReqData << std::endl;
+    std::cout << "\ttimestampReqDataLen: " << timestampReqDataLen << std::endl;
   } else {
     std::cout << "STF_CreateTSRequest: " << retcode << std::endl;
   }
