@@ -63,11 +63,14 @@ SGD_UINT32 STF_InitEnvironment(void **phTSHandle) {
   }
   TimeStampClient greeter(grpc::CreateChannel(
       ndsec_tsa_config, grpc::InsecureChannelCredentials()));
-
   InitEnvironmentOutput res = greeter.InitEnvironment();
-  if (res.code() != timestamp::GRPC_STF_TS_OK) {
+  if(res.code() == GRPC_STF_TS_LINK_FAILED){
+    return STF_TS_SERVER_ERROR;     //连接服务器错误
+  }
+  else if (res.code() != timestamp::GRPC_STF_TS_OK) {
     return res.code();
   }
+  //正常情况
   *phTSHandle = new uint64_t(res.handle().session_id());
   return STF_TS_OK;
 }
@@ -93,6 +96,13 @@ SGD_UINT32 STF_ClearEnvironment(void *hTSHandle) {
   handle->set_session_id(*(uint64_t *)hTSHandle);
   req_input.set_allocated_handle(handle);
   ClearEnvironmentOutput res = greeter.ClearEnvironment(req_input);
+  if(res.code() == GRPC_STF_TS_LINK_FAILED){
+    return STF_TS_SERVER_ERROR;     //连接服务器错误
+  }
+  else if (res.code() != timestamp::GRPC_STF_TS_OK) {
+    return res.code();
+  }
+  //正常情况
   free(hTSHandle);
   return STF_TS_OK;
 }
@@ -151,11 +161,14 @@ SGD_UINT32 STF_CreateTSRequest(void *hTSHandle, SGD_UINT8 *pucInData,
     //缓冲区错误
     return STF_TS_NOT_ENOUGH_MEMORY;
   }
-  if(res.code() == 0)
 
-  if (res.code() != timestamp::GRPC_STF_TS_OK) {
+  if(res.code() == GRPC_STF_TS_LINK_FAILED){
+    return STF_TS_SERVER_ERROR;     //连接服务器错误
+  }
+  else if (res.code() != timestamp::GRPC_STF_TS_OK) {
     return res.code();
   }
+  //正常情况
 
   return STF_TS_OK;
 }
@@ -190,7 +203,7 @@ SGD_UINT32 STF_CreateTSResponse(void *hTSHandle, UNUSED SGD_UINT8 *pucTSRequest,
   //发送，并获得结果
   CreateTSResponseOutput res = greeter.CreateTSResponse(req_input);
   if(res.code() == GRPC_STF_TS_LINK_FAILED){
-    return STF_TS_SERVER_ERROR;
+    return STF_TS_SERVER_ERROR;   //连接服务器错误
   }
   else if (res.code() != timestamp::GRPC_STF_TS_OK) {
     return res.code();
@@ -231,7 +244,7 @@ SGD_UINT32 STF_VerifyTSValidity(void *hTSHandle,
 
   VerifyTSValidityOutput res = greeter.VerifyTSValidity(req_input);
   if(res.code() == GRPC_STF_TS_LINK_FAILED){
-    return STF_TS_SERVER_ERROR;
+    return STF_TS_SERVER_ERROR;//连接服务器错误
   }
   else if (res.code() != timestamp::GRPC_STF_TS_OK) {
     return res.code();
@@ -270,7 +283,7 @@ SGD_UINT32 STF_GetTSInfo(void *hTSHandle, UNUSED SGD_UINT8 *pucTSResponse,
 
   GetTSInfoOutput res = greeter.GetTSInfo(req_input);
   if(res.code() == GRPC_STF_TS_LINK_FAILED){
-    return STF_TS_SERVER_ERROR;
+    return STF_TS_SERVER_ERROR;//连接服务器错误
   }
   else if (res.code() != timestamp::GRPC_STF_TS_OK) {
     return res.code();
@@ -310,7 +323,7 @@ SGD_UINT32 STF_GetTSDetail(void *hTSHandle, UNUSED SGD_UINT8 *pucTSResponse,
 
   GetTSDetailOutput res = greeter.GetTSDetail(req_input);
   if(res.code() == GRPC_STF_TS_LINK_FAILED){
-    return STF_TS_SERVER_ERROR;
+    return STF_TS_SERVER_ERROR;//连接服务器错误
   }
   else if (res.code() != timestamp::GRPC_STF_TS_OK) {
     return res.code();
