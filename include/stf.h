@@ -74,7 +74,8 @@ typedef unsigned int SGD_UINT32;
 #define STF_TS_SYSTEM_FAILURE 0x0400000E //系统内部错误
 
 /*自定义错误代码标识*/
-#define STF_TS_CONFIG_ERROR 0x04000010    //配置文件错误
+#define STF_TS_CONFIG_ERROR 0x04000100 //配置文件错误
+#define STF_TS_NOT_ENOUGH_BUFFER 0x04000101 //分配给输出数据的内存空间不够
 
 /**
  * @brief 建立时间戳环境句柄

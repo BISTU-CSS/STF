@@ -155,9 +155,8 @@ SGD_UINT32 STF_CreateTSRequest(void *hTSHandle, SGD_UINT8 *pucInData,
   req_input.set_allocated_handle(handle);
   req_input.set_uireqtype(uiReqType);
   req_input.set_uihashalgid(uiHashAlgID);
-  std::string tmp_indata(reinterpret_cast<const char *>(pucInData), 0,
-                         uiInDataLength);
-  req_input.set_pucindata(tmp_indata);
+  req_input.set_pucindata(new std::string(
+      reinterpret_cast<const char *>(pucInData), 0, uiInDataLength));
   req_input.set_uiindatalength(uiInDataLength);
   //调用服务器
   CreateTSRequestOutput res = greeter.CreateTSRequest(req_input);
@@ -167,15 +166,14 @@ SGD_UINT32 STF_CreateTSRequest(void *hTSHandle, SGD_UINT8 *pucInData,
     return res.code(); //出现错误服务器的错误码
   }
   //连接服务器成功
-  if (res.puctsrequestlength() <= reinterpret_cast<size_t>(puiTSRequestLength)) {
+  if (res.puctsrequestlength() <=
+      reinterpret_cast<size_t>(puiTSRequestLength)) {
     //缓冲区正常
     *puiTSRequestLength = res.puctsrequestlength();
     strcpy((char *)pucTSRequest, res.puctsrequest().data());
   } else {
-    //缓冲区错误
-    return STF_TS_NOT_ENOUGH_MEMORY;
+    return STF_TS_NOT_ENOUGH_MEMORY; //缓冲区错误（特殊TS）
   }
-
   return STF_TS_OK;
 }
 
@@ -209,7 +207,6 @@ SGD_UINT32 STF_CreateTSResponse(void *hTSHandle, SGD_UINT8 *pucTSRequest,
         uiSignatureAlgID == SGD_SHA256_RSA)) {
     return STF_TS_INVALID_ALG; //不支持的算法类型
   }
-
   //创建链接
   TimeStampClient greeter(grpc::CreateChannel(
       ndsec_tsa_config, grpc::InsecureChannelCredentials()));
@@ -218,7 +215,10 @@ SGD_UINT32 STF_CreateTSResponse(void *hTSHandle, SGD_UINT8 *pucTSRequest,
   auto *handle = new timestamp::Handle;
   handle->set_session_id(*(uint64_t *)hTSHandle);
   req_input.set_allocated_handle(handle);
-
+  req_input.set_puctsresquest(new std::string(
+      reinterpret_cast<const char *>(pucTSRequest), 0, uiTSRequestLength));
+  req_input.set_uitsrequestlength(uiTSRequestLength);
+  req_input.set_uisignaturealgid(uiSignatureAlgID);
   //调用服务器
   CreateTSResponseOutput res = greeter.CreateTSResponse(req_input);
   if (res.code() == GRPC_STF_TS_LINK_FAILED) {
@@ -227,7 +227,14 @@ SGD_UINT32 STF_CreateTSResponse(void *hTSHandle, SGD_UINT8 *pucTSRequest,
     return res.code();
   }
   //连接服务器成功
-
+  if (res.puitsresponselength() <=
+      reinterpret_cast<size_t>(puiTSResponseLength)) {
+    //缓冲区正常
+    *puiTSResponseLength = res.puitsresponselength();
+    strcpy((char *)pucTSResponse, res.puitsresponse().data());
+  } else {
+    return STF_TS_NOT_ENOUGH_BUFFER; //缓冲区错误
+  }
   return STF_TS_OK;
 }
 
@@ -238,13 +245,12 @@ TimeStampClient::VerifyTSValidity(VerifyTSValidityInput request) {
   grpc::Status status = stub_->VerifyTSValidity(&context, request, &reply);
   return reply;
 }
-SGD_UINT32 STF_VerifyTSValidity(void *hTSHandle,
-                                SGD_UINT8 *pucTSResponse,
+SGD_UINT32 STF_VerifyTSValidity(void *hTSHandle, SGD_UINT8 *pucTSResponse,
                                 SGD_UINT32 uiTSResponseLength,
                                 SGD_UINT32 uiHashAlgID,
                                 SGD_UINT32 uiSignatureAlgID,
-                                UNUSED SGD_UINT8 *pucTSCert,
-                                UNUSED SGD_UINT32 uiTSCertLength) {
+                                SGD_UINT8 *pucTSCert,
+                                SGD_UINT32 uiTSCertLength) {
   if (!load_config()) {
     return STF_TS_CONFIG_ERROR;
   }
@@ -263,7 +269,6 @@ SGD_UINT32 STF_VerifyTSValidity(void *hTSHandle,
   if (pucTSResponse == nullptr || uiTSResponseLength == 0) {
     return STF_TS_INVALID_DATAFORMAT; //数据格式错误
   }
-
   //创建链接
   TimeStampClient greeter(grpc::CreateChannel(
       ndsec_tsa_config, grpc::InsecureChannelCredentials()));
@@ -272,17 +277,24 @@ SGD_UINT32 STF_VerifyTSValidity(void *hTSHandle,
   auto *handle = new timestamp::Handle;
   handle->set_session_id(*(uint64_t *)hTSHandle);
   req_input.set_allocated_handle(handle);
-
+  req_input.set_uisignaturealgid(uiSignatureAlgID);
+  req_input.set_uihashalgid(uiHashAlgID);
+  req_input.set_puctsresponse(new std::string(
+      reinterpret_cast<const char *>(pucTSResponse), 0, uiTSResponseLength));
+  req_input.set_uitsresponselength(uiTSResponseLength);
+  req_input.set_puctscert(new std::string(
+      reinterpret_cast<const char *>(pucTSCert), 0, uiTSCertLength));
+  req_input.set_uitscertlength(uiTSCertLength);
   //调用服务器
   VerifyTSValidityOutput res = greeter.VerifyTSValidity(req_input);
   if (res.code() == GRPC_STF_TS_LINK_FAILED) {
     return STF_TS_SERVER_ERROR; //连接服务器错误
-  } else if (res.code() != timestamp::GRPC_STF_TS_OK) {
-    return res.code();
+  } else if (res.code() == timestamp::GRPC_STF_TS_OK) {
+    //连接服务器成功 + 验证成功
+    return STF_TS_OK;
+  } else {
+    return res.code(); //出现错误，返回错误码
   }
-  //连接服务器成功
-
-  return STF_TS_OK;
 }
 
 GetTSInfoOutput TimeStampClient::GetTSInfo(GetTSInfoInput request) {
@@ -291,20 +303,27 @@ GetTSInfoOutput TimeStampClient::GetTSInfo(GetTSInfoInput request) {
   grpc::Status status = stub_->GetTSInfo(&context, request, &reply);
   return reply;
 }
-SGD_UINT32 STF_GetTSInfo(void *hTSHandle, UNUSED SGD_UINT8 *pucTSResponse,
-                         UNUSED SGD_UINT32 uiTSResponseLength,
-                         UNUSED SGD_UINT8 *pucIssuerName,
-                         UNUSED SGD_UINT32 *puiIssuerNameLength,
-                         UNUSED SGD_UINT8 *pucTime,
-                         UNUSED SGD_UINT32 *puiTimeLength) {
+SGD_UINT32 STF_GetTSInfo(void *hTSHandle, SGD_UINT8 *pucTSResponse,
+                         SGD_UINT32 uiTSResponseLength,
+                         SGD_UINT8 *pucIssuerName,
+                         SGD_UINT32 *puiIssuerNameLength, SGD_UINT8 *pucTime,
+                         SGD_UINT32 *puiTimeLength) {
+  if (!load_config()) {
+    return STF_TS_CONFIG_ERROR;
+  }
   // 基本检查
   if (hTSHandle == nullptr) {
     return STF_TS_INVALID_REQUEST; //非法请求
   }
-  if (!load_config()) {
-    return STF_TS_CONFIG_ERROR;
+  if (pucTSResponse == nullptr || uiTSResponseLength == 0) {
+    return STF_TS_INVALID_DATAFORMAT; //数据格式错误
   }
-
+  if (pucIssuerName == nullptr || puiIssuerNameLength == nullptr) {
+    return STF_TS_INVALID_DATAFORMAT; //数据格式错误
+  }
+  if (pucTime == nullptr || puiTimeLength == nullptr) {
+    return STF_TS_INVALID_DATAFORMAT; //数据格式错误
+  }
   //创建链接
   TimeStampClient greeter(grpc::CreateChannel(
       ndsec_tsa_config, grpc::InsecureChannelCredentials()));
@@ -313,7 +332,9 @@ SGD_UINT32 STF_GetTSInfo(void *hTSHandle, UNUSED SGD_UINT8 *pucTSResponse,
   auto *handle = new timestamp::Handle;
   handle->set_session_id(*(uint64_t *)hTSHandle);
   req_input.set_allocated_handle(handle);
-
+  req_input.set_puctsresponse(new std::string(
+      reinterpret_cast<const char *>(pucTSResponse), 0, uiTSResponseLength));
+  req_input.set_uitsresponselength(uiTSResponseLength);
   GetTSInfoOutput res = greeter.GetTSInfo(req_input);
   if (res.code() == GRPC_STF_TS_LINK_FAILED) {
     return STF_TS_SERVER_ERROR; //连接服务器错误
@@ -321,6 +342,15 @@ SGD_UINT32 STF_GetTSInfo(void *hTSHandle, UNUSED SGD_UINT8 *pucTSResponse,
     return res.code();
   }
   //连接服务器成功
+
+  res.pucissuername();
+  res.puiissuernamelength();
+  if (res.puitimelength() <= reinterpret_cast<size_t>(puiTimeLength)) {
+    *puiTimeLength = res.puitimelength();
+    strcpy((char *)pucTime, res.puctime().data());
+  } else {
+    return STF_TS_NOT_ENOUGH_BUFFER; //缓冲区错误
+  }
 
   return STF_TS_OK;
 }
@@ -333,9 +363,8 @@ GetTSDetailOutput TimeStampClient::GetTSDetail(GetTSDetailInput request) {
 }
 SGD_UINT32 STF_GetTSDetail(void *hTSHandle, SGD_UINT8 *pucTSResponse,
                            SGD_UINT32 uiTSResponseLength,
-                           SGD_UINT32 uiItemnumber,
-                           UNUSED SGD_UINT8 *pucItemValue,
-                           UNUSED SGD_UINT32 *puiItemValueLength) {
+                           SGD_UINT32 uiItemNumber, SGD_UINT8 *pucItemValue,
+                           SGD_UINT32 *puiItemValueLength) {
   if (!load_config()) {
     return STF_TS_CONFIG_ERROR;
   }
@@ -343,7 +372,13 @@ SGD_UINT32 STF_GetTSDetail(void *hTSHandle, SGD_UINT8 *pucTSResponse,
   if (hTSHandle == nullptr) {
     return STF_TS_INVALID_REQUEST; //非法请求
   }
-  switch (uiItemnumber) {
+  if (pucTSResponse == nullptr || uiTSResponseLength == 0) {
+    return STF_TS_INVALID_DATAFORMAT; //数据格式错误
+  }
+  if (pucItemValue == nullptr || puiItemValueLength == nullptr) {
+    return STF_TS_INVALID_DATAFORMAT; //数据格式错误
+  }
+  switch (uiItemNumber) {
   case STF_TIME_OF_STAMP:
   case STF_CN_OF_TSSIGNER:
   case STF_ORIGINAL_DATA:
@@ -356,12 +391,10 @@ SGD_UINT32 STF_GetTSDetail(void *hTSHandle, SGD_UINT8 *pucTSResponse,
   case STF_SUBJECT_ORGNIZATION_OF_TSSIGNER:
   case STF_SUBJECT_CITY_OF_TSSIGNER:
   case STF_SUBJECT_EMAIL_OF_TSSIGNER:
-    std::cout<<"OOOO"<<std::endl;
     break;
   default:
     return STF_TS_INVALID_ITEM; //输人项目编号无效
   }
-
   //创建链接
   TimeStampClient greeter(grpc::CreateChannel(
       ndsec_tsa_config, grpc::InsecureChannelCredentials()));
@@ -371,11 +404,9 @@ SGD_UINT32 STF_GetTSDetail(void *hTSHandle, SGD_UINT8 *pucTSResponse,
   handle->set_session_id(*(uint64_t *)hTSHandle);
   req_input.set_allocated_handle(handle);
 
-
-  req_input.set_uiitemnumber(uiItemnumber);
-  std::string response_indata(reinterpret_cast<const char *>(pucTSResponse), 0,
-                              uiTSResponseLength);
-  req_input.set_puctsresponse(response_indata);
+  req_input.set_uiitemnumber(uiItemNumber);
+  req_input.set_puctsresponse(new std::string(
+      reinterpret_cast<const char *>(pucTSResponse), 0, uiTSResponseLength));
   req_input.set_uitsresponselength(uiTSResponseLength);
   //调用服务器
   GetTSDetailOutput res = greeter.GetTSDetail(req_input);
@@ -385,10 +416,12 @@ SGD_UINT32 STF_GetTSDetail(void *hTSHandle, SGD_UINT8 *pucTSResponse,
     return res.code();
   }
   //连接服务器成功
-  if (res.puiitemvaluelength() <= reinterpret_cast<size_t>(puiItemValueLength)) {
+  if (res.puiitemvaluelength() <=
+      reinterpret_cast<size_t>(puiItemValueLength)) {
     *puiItemValueLength = res.puiitemvaluelength();
     strcpy((char *)pucItemValue, res.puiitemvalue().data());
+  } else {
+    return STF_TS_NOT_ENOUGH_BUFFER; //缓冲区错误
   }
-
   return STF_TS_OK;
 }

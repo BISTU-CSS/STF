@@ -91,13 +91,13 @@ int main(UNUSED int argc, UNUSED char *argv[]) {
   //  //**************************************************************************
   //  timeDataLen = sizeof(timeData);
   //  memset(timeData, 0, timeDataLen);
-    retcode = STF_GetTSDetail(handle, timestampRespData, timestampRespDataLen,
-                              STF_TIME_OF_STAMP, itemData, &itemDataLen);
-    if (retcode == STF_TS_OK) {
-      std::cout << "STF_GetTSDetail: OK" << std::endl;
-    } else {
-      std::cout << "STF_GetTSDetail: " << retcode << std::endl;
-    }
+  retcode = STF_GetTSDetail(handle, timestampRespData, timestampRespDataLen,
+                            STF_TIME_OF_STAMP, itemData, &itemDataLen);
+  if (retcode == STF_TS_OK) {
+    std::cout << "STF_GetTSDetail: OK" << std::endl;
+  } else {
+    std::cout << "STF_GetTSDetail: " << retcode << std::endl;
+  }
 
   //**************************************************************************
   retcode = STF_ClearEnvironment(handle);
