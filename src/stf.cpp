@@ -155,8 +155,8 @@ SGD_UINT32 STF_CreateTSRequest(void *hTSHandle, SGD_UINT8 *pucInData,
   req_input.set_allocated_handle(handle);
   req_input.set_uireqtype(uiReqType);
   req_input.set_uihashalgid(uiHashAlgID);
-  req_input.set_pucindata(new std::string(
-      reinterpret_cast<const char *>(pucInData), 0, uiInDataLength));
+  std::string indata_tmp_string(reinterpret_cast<const char *>(pucInData), 0, uiInDataLength);
+  req_input.set_pucindata(indata_tmp_string);
   req_input.set_uiindatalength(uiInDataLength);
   //调用服务器
   CreateTSRequestOutput res = greeter.CreateTSRequest(req_input);
@@ -215,8 +215,8 @@ SGD_UINT32 STF_CreateTSResponse(void *hTSHandle, SGD_UINT8 *pucTSRequest,
   auto *handle = new timestamp::Handle;
   handle->set_session_id(*(uint64_t *)hTSHandle);
   req_input.set_allocated_handle(handle);
-  req_input.set_puctsresquest(new std::string(
-      reinterpret_cast<const char *>(pucTSRequest), 0, uiTSRequestLength));
+  std::string request_tmp_string(reinterpret_cast<const char *>(pucTSRequest), 0, uiTSRequestLength);
+  req_input.set_puctsresquest(request_tmp_string);
   req_input.set_uitsrequestlength(uiTSRequestLength);
   req_input.set_uisignaturealgid(uiSignatureAlgID);
   //调用服务器
@@ -279,11 +279,12 @@ SGD_UINT32 STF_VerifyTSValidity(void *hTSHandle, SGD_UINT8 *pucTSResponse,
   req_input.set_allocated_handle(handle);
   req_input.set_uisignaturealgid(uiSignatureAlgID);
   req_input.set_uihashalgid(uiHashAlgID);
-  req_input.set_puctsresponse(new std::string(
-      reinterpret_cast<const char *>(pucTSResponse), 0, uiTSResponseLength));
+  std::string response_tmp_string(
+      reinterpret_cast<const char *>(pucTSResponse), 0, uiTSResponseLength);
+  req_input.set_puctsresponse(response_tmp_string);
   req_input.set_uitsresponselength(uiTSResponseLength);
-  req_input.set_puctscert(new std::string(
-      reinterpret_cast<const char *>(pucTSCert), 0, uiTSCertLength));
+  std::string cert_tmp_string(reinterpret_cast<const char *>(pucTSCert), 0, uiTSCertLength);
+  req_input.set_puctscert(cert_tmp_string);
   req_input.set_uitscertlength(uiTSCertLength);
   //调用服务器
   VerifyTSValidityOutput res = greeter.VerifyTSValidity(req_input);
@@ -332,8 +333,9 @@ SGD_UINT32 STF_GetTSInfo(void *hTSHandle, SGD_UINT8 *pucTSResponse,
   auto *handle = new timestamp::Handle;
   handle->set_session_id(*(uint64_t *)hTSHandle);
   req_input.set_allocated_handle(handle);
-  req_input.set_puctsresponse(new std::string(
-      reinterpret_cast<const char *>(pucTSResponse), 0, uiTSResponseLength));
+  std::string response_tmp_string(
+      reinterpret_cast<const char *>(pucTSResponse), 0, uiTSResponseLength);
+  req_input.set_puctsresponse(response_tmp_string);
   req_input.set_uitsresponselength(uiTSResponseLength);
   GetTSInfoOutput res = greeter.GetTSInfo(req_input);
   if (res.code() == GRPC_STF_TS_LINK_FAILED) {
@@ -405,8 +407,8 @@ SGD_UINT32 STF_GetTSDetail(void *hTSHandle, SGD_UINT8 *pucTSResponse,
   req_input.set_allocated_handle(handle);
 
   req_input.set_uiitemnumber(uiItemNumber);
-  req_input.set_puctsresponse(new std::string(
-      reinterpret_cast<const char *>(pucTSResponse), 0, uiTSResponseLength));
+  std::string response_tmp_string(reinterpret_cast<const char *>(pucTSResponse), 0, uiTSResponseLength);
+  req_input.set_puctsresponse(response_tmp_string);
   req_input.set_uitsresponselength(uiTSResponseLength);
   //调用服务器
   GetTSDetailOutput res = greeter.GetTSDetail(req_input);
