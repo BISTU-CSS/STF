@@ -130,7 +130,7 @@ SGD_UINT32 STF_CreateTSRequest(void *hTSHandle, SGD_UINT8 *pucInData,
   if (hTSHandle == nullptr) {
     return STF_TS_INVALID_REQUEST; //非法请求
   }
-  if (!(uiHashAlgID == SGD_SHA256 || uiHashAlgID == SGD_SM3)) {
+  if (!(uiHashAlgID == SGD_SHA256 || uiHashAlgID == SGD_SM3 || uiHashAlgID == SGD_SHA1)) {
     return STF_TS_INVALID_ALG; //不支持的算法类型
   }
   if (!(uiReqType == 0 || uiReqType == 1)) {
@@ -258,7 +258,7 @@ SGD_UINT32 STF_VerifyTSValidity(void *hTSHandle, SGD_UINT8 *pucTSResponse,
   if (hTSHandle == nullptr) {
     return STF_TS_INVALID_REQUEST; //非法请求
   }
-  if (!(uiHashAlgID == SGD_SHA256 || uiHashAlgID == SGD_SM3)) {
+  if (!(uiHashAlgID == SGD_SHA256 || uiHashAlgID == SGD_SM3 || uiHashAlgID == SGD_SHA1)) {
     return STF_TS_INVALID_ALG; //不支持的算法类型
   }
   if (!(uiSignatureAlgID == SGD_SM3_SM2 || uiSignatureAlgID == SGD_SM3_RSA ||
