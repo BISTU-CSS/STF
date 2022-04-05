@@ -108,6 +108,7 @@ SGD_UINT32 STF_ClearEnvironment(void *hTSHandle) {
   }
   //正常情况
   free(hTSHandle);
+
   return STF_TS_OK;
 }
 
@@ -130,7 +131,8 @@ SGD_UINT32 STF_CreateTSRequest(void *hTSHandle, SGD_UINT8 *pucInData,
   if (hTSHandle == nullptr) {
     return STF_TS_INVALID_REQUEST; //非法请求
   }
-  if (!(uiHashAlgID == SGD_SHA256 || uiHashAlgID == SGD_SM3 || uiHashAlgID == SGD_SHA1)) {
+  if (!(uiHashAlgID == SGD_SHA256 || uiHashAlgID == SGD_SM3 ||
+        uiHashAlgID == SGD_SHA1)) {
     return STF_TS_INVALID_ALG; //不支持的算法类型
   }
   if (!(uiReqType == 0 || uiReqType == 1)) {
@@ -155,7 +157,11 @@ SGD_UINT32 STF_CreateTSRequest(void *hTSHandle, SGD_UINT8 *pucInData,
   req_input.set_allocated_handle(handle);
   req_input.set_uireqtype(uiReqType);
   req_input.set_uihashalgid(uiHashAlgID);
-  std::string indata_tmp_string(reinterpret_cast<const char *>(pucInData), 0, uiInDataLength);
+  std::string indata_tmp_string;
+  indata_tmp_string.resize(uiInDataLength);
+  for (size_t i = 0; i < uiInDataLength; i++) {
+    indata_tmp_string[i] = pucInData[i];
+  }
   req_input.set_pucindata(indata_tmp_string);
   req_input.set_uiindatalength(uiInDataLength);
   //调用服务器
@@ -165,12 +171,13 @@ SGD_UINT32 STF_CreateTSRequest(void *hTSHandle, SGD_UINT8 *pucInData,
   } else if (res.code() != timestamp::GRPC_STF_TS_OK) {
     return res.code(); //出现错误服务器的错误码
   }
+
   //连接服务器成功
   if (res.puctsrequestlength() <=
       reinterpret_cast<size_t>(puiTSRequestLength)) {
     //缓冲区正常
     *puiTSRequestLength = res.puctsrequestlength();
-    strcpy((char *)pucTSRequest, res.puctsrequest().data());
+    memcpy(pucTSRequest, res.puctsrequest().data(), res.puctsrequestlength());
   } else {
     return STF_TS_NOT_ENOUGH_MEMORY; //缓冲区错误（特殊TS）
   }
@@ -215,7 +222,11 @@ SGD_UINT32 STF_CreateTSResponse(void *hTSHandle, SGD_UINT8 *pucTSRequest,
   auto *handle = new timestamp::Handle;
   handle->set_session_id(*(uint64_t *)hTSHandle);
   req_input.set_allocated_handle(handle);
-  std::string request_tmp_string(reinterpret_cast<const char *>(pucTSRequest), 0, uiTSRequestLength);
+  std::string request_tmp_string;
+  request_tmp_string.resize(uiTSRequestLength);
+  for (size_t i = 0; i < uiTSRequestLength; i++) {
+    request_tmp_string[i] = pucTSRequest[i];
+  }
   req_input.set_puctsresquest(request_tmp_string);
   req_input.set_uitsrequestlength(uiTSRequestLength);
   req_input.set_uisignaturealgid(uiSignatureAlgID);
@@ -231,7 +242,7 @@ SGD_UINT32 STF_CreateTSResponse(void *hTSHandle, SGD_UINT8 *pucTSRequest,
       reinterpret_cast<size_t>(puiTSResponseLength)) {
     //缓冲区正常
     *puiTSResponseLength = res.puitsresponselength();
-    strcpy((char *)pucTSResponse, res.puitsresponse().data());
+    memcpy(pucTSRequest, res.puitsresponse().data(), res.puitsresponselength());
   } else {
     return STF_TS_NOT_ENOUGH_BUFFER; //缓冲区错误
   }
@@ -258,7 +269,8 @@ SGD_UINT32 STF_VerifyTSValidity(void *hTSHandle, SGD_UINT8 *pucTSResponse,
   if (hTSHandle == nullptr) {
     return STF_TS_INVALID_REQUEST; //非法请求
   }
-  if (!(uiHashAlgID == SGD_SHA256 || uiHashAlgID == SGD_SM3 || uiHashAlgID == SGD_SHA1)) {
+  if (!(uiHashAlgID == SGD_SHA256 || uiHashAlgID == SGD_SM3 ||
+        uiHashAlgID == SGD_SHA1)) {
     return STF_TS_INVALID_ALG; //不支持的算法类型
   }
   if (!(uiSignatureAlgID == SGD_SM3_SM2 || uiSignatureAlgID == SGD_SM3_RSA ||
@@ -279,11 +291,18 @@ SGD_UINT32 STF_VerifyTSValidity(void *hTSHandle, SGD_UINT8 *pucTSResponse,
   req_input.set_allocated_handle(handle);
   req_input.set_uisignaturealgid(uiSignatureAlgID);
   req_input.set_uihashalgid(uiHashAlgID);
-  std::string response_tmp_string(
-      reinterpret_cast<const char *>(pucTSResponse), 0, uiTSResponseLength);
+  std::string response_tmp_string;
+  response_tmp_string.resize(uiTSResponseLength);
+  for (size_t i = 0; i < uiTSResponseLength; i++) {
+    response_tmp_string[i] = pucTSResponse[i];
+  }
   req_input.set_puctsresponse(response_tmp_string);
   req_input.set_uitsresponselength(uiTSResponseLength);
-  std::string cert_tmp_string(reinterpret_cast<const char *>(pucTSCert), 0, uiTSCertLength);
+  std::string cert_tmp_string;
+  cert_tmp_string.resize(uiTSCertLength);
+  for (size_t i = 0; i < uiTSCertLength; i++) {
+    cert_tmp_string[i] = pucTSCert[i];
+  }
   req_input.set_puctscert(cert_tmp_string);
   req_input.set_uitscertlength(uiTSCertLength);
   //调用服务器
@@ -333,8 +352,11 @@ SGD_UINT32 STF_GetTSInfo(void *hTSHandle, SGD_UINT8 *pucTSResponse,
   auto *handle = new timestamp::Handle;
   handle->set_session_id(*(uint64_t *)hTSHandle);
   req_input.set_allocated_handle(handle);
-  std::string response_tmp_string(
-      reinterpret_cast<const char *>(pucTSResponse), 0, uiTSResponseLength);
+  std::string response_tmp_string;
+  response_tmp_string.resize(uiTSResponseLength);
+  for (size_t i = 0; i < uiTSResponseLength; i++) {
+    response_tmp_string[i] = pucTSResponse[i];
+  }
   req_input.set_puctsresponse(response_tmp_string);
   req_input.set_uitsresponselength(uiTSResponseLength);
   GetTSInfoOutput res = greeter.GetTSInfo(req_input);
@@ -343,17 +365,23 @@ SGD_UINT32 STF_GetTSInfo(void *hTSHandle, SGD_UINT8 *pucTSResponse,
   } else if (res.code() != timestamp::GRPC_STF_TS_OK) {
     return res.code();
   }
-  //连接服务器成功
 
-  res.pucissuername();
-  res.puiissuernamelength();
-  if (res.puitimelength() <= reinterpret_cast<size_t>(puiTimeLength)) {
-    *puiTimeLength = res.puitimelength();
-    strcpy((char *)pucTime, res.puctime().data());
+  //连接服务器成功
+  if (res.puiissuernamelength() <=
+      reinterpret_cast<size_t>(puiIssuerNameLength)) {
+    *puiIssuerNameLength = res.puiissuernamelength();
+    memcpy(pucIssuerName, res.pucissuername().data(),
+           res.puiissuernamelength());
   } else {
     return STF_TS_NOT_ENOUGH_BUFFER; //缓冲区错误
   }
 
+  if (res.puitimelength() <= reinterpret_cast<size_t>(puiTimeLength)) {
+    *puiTimeLength = res.puitimelength();
+    memcpy(pucTime, res.puctime().data(), res.puitimelength());
+  } else {
+    return STF_TS_NOT_ENOUGH_BUFFER; //缓冲区错误
+  }
   return STF_TS_OK;
 }
 
@@ -407,7 +435,11 @@ SGD_UINT32 STF_GetTSDetail(void *hTSHandle, SGD_UINT8 *pucTSResponse,
   req_input.set_allocated_handle(handle);
 
   req_input.set_uiitemnumber(uiItemNumber);
-  std::string response_tmp_string(reinterpret_cast<const char *>(pucTSResponse), 0, uiTSResponseLength);
+  std::string response_tmp_string;
+  response_tmp_string.resize(uiTSResponseLength);
+  for (size_t i = 0; i < uiTSResponseLength; i++) {
+    response_tmp_string[i] = pucTSResponse[i];
+  }
   req_input.set_puctsresponse(response_tmp_string);
   req_input.set_uitsresponselength(uiTSResponseLength);
   //调用服务器
@@ -421,7 +453,7 @@ SGD_UINT32 STF_GetTSDetail(void *hTSHandle, SGD_UINT8 *pucTSResponse,
   if (res.puiitemvaluelength() <=
       reinterpret_cast<size_t>(puiItemValueLength)) {
     *puiItemValueLength = res.puiitemvaluelength();
-    strcpy((char *)pucItemValue, res.puiitemvalue().data());
+    memcpy(pucItemValue, res.puiitemvalue().data(), res.puiitemvaluelength());
   } else {
     return STF_TS_NOT_ENOUGH_BUFFER; //缓冲区错误
   }
