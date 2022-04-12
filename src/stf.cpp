@@ -242,7 +242,7 @@ SGD_UINT32 STF_CreateTSResponse(void *hTSHandle, SGD_UINT8 *pucTSRequest,
       reinterpret_cast<size_t>(puiTSResponseLength)) {
     //缓冲区正常
     *puiTSResponseLength = res.puitsresponselength();
-    memcpy(pucTSRequest, res.puitsresponse().data(), res.puitsresponselength());
+    memcpy(pucTSResponse, res.puitsresponse().data(), res.puitsresponselength());
   } else {
     return STF_TS_NOT_ENOUGH_BUFFER; //缓冲区错误
   }
