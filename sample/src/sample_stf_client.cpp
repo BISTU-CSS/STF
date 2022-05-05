@@ -271,6 +271,7 @@ int main(UNUSED int argc, UNUSED char *argv[]) {
   UNUSED unsigned int itemDataLen = sizeof(itemData);
 
   UNUSED const char *plainData = "test plain data";
+  std::cout<<plainData<<std::endl;
   UNUSED unsigned int plainDataLen = (unsigned int)strlen(plainData);
 
   //**************************************************************************
@@ -289,9 +290,9 @@ int main(UNUSED int argc, UNUSED char *argv[]) {
                                 timestampReqData, &timestampReqDataLen);
   if (retcode == STF_TS_OK) {
     std::cout << "STF_CreateTSRequest: OK" << std::endl;
-    for (size_t i = 0; i < timestampReqDataLen; i++) {
-      std::cout << timestampReqData[i];
-    }std::cout << std::endl;
+//    for (size_t i = 0; i < timestampReqDataLen; i++) {
+//      std::cout << timestampReqData[i];
+//    }std::cout << std::endl;
     char base64[2048] = {0};
     Base64::Encode(reinterpret_cast<const char *>(timestampReqData),timestampReqDataLen,base64,2048);
     std::cout<<base64<<std::endl;
@@ -308,10 +309,13 @@ int main(UNUSED int argc, UNUSED char *argv[]) {
                                  &timestampRespDataLen);
   if (retcode == STF_TS_OK) {
     std::cout << "STF_CreateTSResponse: OK" << std::endl;
-    for (size_t i = 0; i < timestampRespDataLen; i++) {
-      std::cout << timestampRespData[i];
-    }
-    std::cout << std::endl;
+//    for (size_t i = 0; i < timestampRespDataLen; i++) {
+//      std::cout << timestampRespData[i];
+//    }
+//    std::cout << std::endl;
+    char base64_resp[10920] = {0};
+    Base64::Encode(reinterpret_cast<const char *>(timestampRespData),timestampRespDataLen,base64_resp,10920);
+    std::cout<<base64_resp<<std::endl;
   } else {
     std::cout << "STF_CreateTSResponse: " << retcode << std::endl;
   }
