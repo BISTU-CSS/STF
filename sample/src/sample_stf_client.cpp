@@ -285,6 +285,7 @@ int main(UNUSED int argc, UNUSED char *argv[]) {
   //**************************************************************************
   timestampReqDataLen = sizeof(timestampReqData);
   memset(timestampReqData, 0, timestampReqDataLen);
+  //uiReqType = 0表示包含时间戳服务器证书，1表示不包含时间戳服务器证书
   retcode = STF_CreateTSRequest(handle, (unsigned char *)plainData,
                                 plainDataLen, 0, NULL, 0, SGD_SHA256,
                                 timestampReqData, &timestampReqDataLen);
@@ -357,11 +358,12 @@ int main(UNUSED int argc, UNUSED char *argv[]) {
   timeDataLen = sizeof(timeData);
   memset(timeData, 0, timeDataLen);
   retcode = STF_GetTSDetail(handle, timestampRespData, timestampRespDataLen,
-                            STF_TIME_OF_STAMP, itemData, &itemDataLen);
+                            STF_SUBJECT_EMAIL_OF_TSSIGNER, itemData, &itemDataLen);
   if (retcode == STF_TS_OK) {
     std::cout << "STF_GetTSDetail: OK" << std::endl;
     for (size_t i = 0; i < itemDataLen; i++) {
       std::cout << itemData[i];
+      //printf("%x",itemData[i]);
     }
     std::cout << std::endl;
 
