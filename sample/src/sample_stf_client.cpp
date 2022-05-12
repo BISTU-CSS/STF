@@ -7,7 +7,7 @@
 const char kBase64Alphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                                "abcdefghijklmnopqrstuvwxyz"
                                "0123456789+/";
-
+//192.168.209.140     172.27.120.33
 class Base64 {
 public:
   static bool Encode(const std::string &in, std::string *out) {
@@ -279,7 +279,7 @@ int main(UNUSED int argc, UNUSED char *argv[]) {
   if (retcode == STF_TS_OK) {
     std::cout << "STF_InitEnvironment: OK" << std::endl;
   } else {
-    std::cout << "STF_InitEnvironment: " << retcode << std::endl;
+    printf("STF_InitEnvironment: %x\n",retcode);
   }
 
   //**************************************************************************
@@ -299,7 +299,7 @@ int main(UNUSED int argc, UNUSED char *argv[]) {
     std::cout<<base64<<std::endl;
     std::cout << "\ttimestampReqDataLen: " << timestampReqDataLen << std::endl;
   } else {
-    std::cout << "STF_CreateTSRequest: " << retcode << std::endl;
+    printf("STF_CreateTSRequest: %x\n",retcode);
   }
 
   //**************************************************************************
@@ -329,7 +329,7 @@ int main(UNUSED int argc, UNUSED char *argv[]) {
     std::cout << "STF_VerifyTSValidity: OK" << std::endl;
 
   } else {
-    std::cout << "STF_VerifyTSValidity: " << retcode << std::endl;
+    printf("STF_VerifyTSValidity: %x\n",retcode);
   }
 
   //  //**************************************************************************
@@ -351,14 +351,14 @@ int main(UNUSED int argc, UNUSED char *argv[]) {
     }
     std::cout << std::endl;
   } else {
-    std::cout << "STF_GetTSInfo: " << retcode << std::endl;
+    printf("STF_GetTSInfo: %x\n",retcode);
   }
 
   //  //**************************************************************************
   timeDataLen = sizeof(timeData);
   memset(timeData, 0, timeDataLen);
   retcode = STF_GetTSDetail(handle, timestampRespData, timestampRespDataLen,
-                            STF_SUBJECT_EMAIL_OF_TSSIGNER, itemData, &itemDataLen);
+                            STF_CN_OF_TSSIGNER, itemData, &itemDataLen);
   if (retcode == STF_TS_OK) {
     std::cout << "STF_GetTSDetail: OK" << std::endl;
     for (size_t i = 0; i < itemDataLen; i++) {
@@ -368,7 +368,7 @@ int main(UNUSED int argc, UNUSED char *argv[]) {
     std::cout << std::endl;
 
   } else {
-    std::cout << "STF_GetTSDetail: " << retcode << std::endl;
+    printf("STF_GetTSDetail: %x\n",retcode);
   }
 
   //**************************************************************************
@@ -376,6 +376,6 @@ int main(UNUSED int argc, UNUSED char *argv[]) {
   if (retcode == STF_TS_OK) {
     std::cout << "STF_ClearEnvironment: OK" << std::endl;
   } else {
-    std::cout << "STF_ClearEnvironment: " << retcode << std::endl;
+    printf("STF_ClearEnvironment: %x\n",retcode);
   }
 }
